@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/timohahaa/executor/internal/entity"
 	"github.com/timohahaa/executor/internal/repository"
 )
@@ -17,17 +18,21 @@ type commandService struct {
 	commandRepo repository.CommandRepository
 	// пусть до стандартной оболочки, например /bin/sh или /bin/bash
 	defaultShellPath string
+	log              *logrus.Logger
 }
 
-func NewCommandService(commandRepo repository.CommandRepository, defaultShellPath string) *commandService {
+func NewCommandService(commandRepo repository.CommandRepository, defaultShellPath string, logger *logrus.Logger) *commandService {
 	return &commandService{
-		commandRepo: commandRepo,
+		commandRepo:      commandRepo,
+		defaultShellPath: defaultShellPath,
+		log:              logger,
 	}
 }
 
 func (s *commandService) CreateCommand(ctx context.Context, commandText string) (entity.Command, error) {
 	command, err := s.commandRepo.CreateCommand(ctx, commandText)
 	if err != nil {
+		s.log.Errorf("commandService.CreateCommand -> commandRepo.CreateCommand: %v", err)
 		return entity.Command{}, err
 	}
 
@@ -37,6 +42,7 @@ func (s *commandService) CreateCommand(ctx context.Context, commandText string) 
 func (s *commandService) ListCommands(ctx context.Context, limit, offset uint64) ([]entity.Command, error) {
 	commands, err := s.commandRepo.ListCommands(ctx, limit, offset)
 	if err != nil {
+		s.log.Errorf("commandService.ListCommands -> commandRepo.ListCommands: %v", err)
 		return nil, err
 	}
 
@@ -49,6 +55,7 @@ func (s *commandService) GetCommandById(ctx context.Context, commandId uint64) (
 	if errors.Is(err, repository.ErrCommandNotFound) {
 		return entity.Command{}, ErrCommandNotFound
 	} else if err != nil {
+		s.log.Errorf("commandService.GetCommandById -> commandRepo.GetCommandById: %v", err)
 		return entity.Command{}, err
 	}
 
@@ -58,6 +65,7 @@ func (s *commandService) GetCommandById(ctx context.Context, commandId uint64) (
 func (s *commandService) processOutput(ctx context.Context, commandId uint64, line string) error {
 	err := s.commandRepo.SaveCommandOutput(ctx, commandId, line)
 	if err != nil {
+		s.log.Errorf("commandService.processOutput -> commandRepo.SaveCommandOutput: %v", err)
 		return err
 	}
 
@@ -73,6 +81,7 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 	}
 	// не можем проверить, запущена ли команда, так как возникла ошибка
 	if !errors.Is(err, repository.ErrCommandNotRunning) {
+		s.log.Errorf("commandService.RunCommand -> commandRepo.GetCommandPID: %v", err)
 		return err
 	}
 
@@ -81,12 +90,14 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 	if errors.Is(err, repository.ErrCommandNotFound) {
 		return ErrCommandNotFound
 	} else if err != nil {
+		s.log.Errorf("commandService.RunCommand -> commandRepo.GetCommandById: %v", err)
 		return err
 	}
 
 	// отчищаем старый вывод команды
 	err = s.commandRepo.ClearCommandOutput(ctx, commandId)
 	if err != nil {
+		s.log.Errorf("commandService.RunCommand -> commandRepo.ClearCommandOutput: %v", err)
 		return err
 	}
 
@@ -99,6 +110,7 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		s.log.Errorf("commandService.RunCommand -> cmd.StdoutPipe: %v", err)
 		return err
 	}
 	scanner := bufio.NewScanner(stdout)
@@ -106,6 +118,7 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 	// стартуем исполнение команды
 	err = cmd.Start()
 	if err != nil {
+		s.log.Errorf("commandService.RunCommand -> cmd.Start: %v", err)
 		return err
 	}
 
@@ -124,6 +137,7 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 	if scanner.Err() != nil {
 		cmd.Process.Kill()
 		cmd.Wait()
+		s.log.Errorf("commandService.RunCommand -> scanner.Err: %v", err)
 		return scanner.Err()
 	}
 
@@ -137,6 +151,7 @@ func (s *commandService) StopCommand(ctx context.Context, commandId uint64) erro
 	if errors.Is(err, repository.ErrCommandNotFound) {
 		return ErrCommandNotFound
 	} else if err != nil {
+		s.log.Errorf("commandService.StopCommand -> commandRepo.GetCommandById: %v", err)
 		return err
 	}
 
@@ -145,6 +160,7 @@ func (s *commandService) StopCommand(ctx context.Context, commandId uint64) erro
 	if errors.Is(err, repository.ErrCommandNotRunning) {
 		return ErrCommandNotRunning
 	} else if err != nil {
+		s.log.Errorf("commandService.StopCommand -> commandRepo.GetCommandPID: %v", err)
 		return err
 	}
 
@@ -166,7 +182,11 @@ func (s *commandService) StopCommand(ctx context.Context, commandId uint64) erro
 	if err != nil {
 		// по хорошему не хочет, значит будет по плохому >:(
 		err = process.Signal(syscall.SIGKILL)
-		return err
+		if err != nil {
+			s.log.Errorf("commandService.StopCommand -> process.Signal: %v", err)
+			return err
+		}
+		return nil
 	}
 
 	// проверяем что процесс завершился
@@ -181,5 +201,9 @@ func (s *commandService) StopCommand(ctx context.Context, commandId uint64) erro
 
 	// по хорошему он снова не захотел >:(
 	err = process.Signal(syscall.SIGKILL)
-	return err
+	if err != nil {
+		s.log.Errorf("commandService.StopCommand -> process.Signal: %v", err)
+		return err
+	}
+	return nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 	"github.com/timohahaa/executor/internal/entity"
 
 	"github.com/timohahaa/postgres"
@@ -19,13 +20,15 @@ type commandRepository struct {
 	rdb *redis.Client
 	// как долно хранить pid исполняемой команды (в секундах)
 	pidTTL int64
+	log    *logrus.Logger
 }
 
-func NewCommandRepository(pg *postgres.Postgres, redis *redis.Client, pidTTL int64) *commandRepository {
+func NewCommandRepository(pg *postgres.Postgres, redis *redis.Client, pidTTL int64, logger *logrus.Logger) *commandRepository {
 	return &commandRepository{
 		db:     pg,
 		rdb:    redis,
 		pidTTL: pidTTL,
+		log:    logger,
 	}
 }
 
@@ -40,6 +43,7 @@ func (r *commandRepository) CreateCommand(ctx context.Context, commandText strin
 	var createdId uint64
 	err := r.db.ConnPool.QueryRow(ctx, sql, args...).Scan(&createdId)
 	if err != nil {
+		r.log.Errorf("commandRepository.CreateCommand -> QueryRow: %v", err)
 		return entity.Command{}, err
 	}
 
@@ -57,6 +61,7 @@ func (r *commandRepository) ListCommands(ctx context.Context, limit, offset uint
 	var commands []entity.Command
 	rows, err := r.db.ConnPool.Query(ctx, sql, args...)
 	if err != nil {
+		r.log.Errorf("commandRepository.ListCommands -> Query: %v", err)
 		return []entity.Command(nil), err
 	}
 
@@ -81,6 +86,7 @@ func (r *commandRepository) GetCommandById(ctx context.Context, commandId uint64
 	if errors.Is(err, pgx.ErrNoRows) {
 		return entity.Command{}, ErrCommandNotFound
 	} else if err != nil {
+		r.log.Errorf("commandRepository.GetCommandById -> QueryRow: %v", err)
 		return entity.Command{}, err
 	}
 
@@ -96,6 +102,7 @@ func (r *commandRepository) SaveCommandOutput(ctx context.Context, commandId uin
 
 	_, err := r.db.ConnPool.Exec(ctx, sql, args...)
 	if err != nil {
+		r.log.Errorf("commandRepository.SaveCommandOutput -> Exec: %v", err)
 		return err
 	}
 
@@ -110,6 +117,7 @@ func (r *commandRepository) ClearCommandOutput(ctx context.Context, commandId ui
 
 	_, err := r.db.ConnPool.Exec(ctx, sql, args...)
 	if err != nil {
+		r.log.Errorf("commandRepository.ClearCommandOutput -> Exec: %v", err)
 		return err
 	}
 
@@ -120,6 +128,7 @@ func (r *commandRepository) SetCommandPID(ctx context.Context, commandId uint64,
 	key := fmt.Sprintf("command:%d", commandId)
 	err := r.rdb.Set(ctx, key, pid, time.Second*time.Duration(r.pidTTL)).Err()
 	if err != nil {
+		r.log.Errorf("commandRepository.SetCommandPID -> Set: %v", err)
 		return err
 	}
 
@@ -132,6 +141,7 @@ func (r *commandRepository) GetCommandPID(ctx context.Context, commandId uint64)
 	if errors.Is(err, redis.Nil) {
 		return 0, ErrCommandNotRunning
 	} else if err != nil {
+		r.log.Errorf("commandRepository.GetCommandPID -> Get: %v", err)
 		return 0, err
 	}
 
@@ -145,6 +155,7 @@ func (r *commandRepository) DeleteCommandPID(ctx context.Context, commandId uint
 	key := fmt.Sprintf("command:%d", commandId)
 	_, err := r.rdb.Del(ctx, key).Result()
 	if err != nil {
+		r.log.Errorf("commandRepository.DeleteCommandPID -> Del: %v", err)
 		return err
 	}
 
