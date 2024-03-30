@@ -30,11 +30,11 @@ func newCommandRoutes(g *echo.Group, cs service.CommandService) {
 }
 
 type createCommandInput struct {
-	CommandText string `json:"command_text"`
+	CommandText string `json:"command_text" validate:"required"`
 }
 
 type createCommandOutput struct {
-	Id uint64 `json:"command_id"`
+	Id uint64 `json:"command_id" validate:"required"`
 }
 
 // POST /api/v1/command
@@ -42,6 +42,10 @@ func (r *commandRoutes) CreateCommand(c echo.Context) error {
 	var input createCommandInput
 	if err := c.Bind(&input); err != nil {
 		newErrorMessage(c, http.StatusBadRequest, ErrInvalidRequestBody.Error())
+		return err
+	}
+	if err := c.Validate(input); err != nil {
+		newErrorMessage(c, http.StatusBadRequest, err.Error())
 		return err
 	}
 
@@ -86,8 +90,8 @@ func (r *commandRoutes) GetCommandById(c echo.Context) error {
 }
 
 type listCommandsQueryParams struct {
-	Limit  uint64 `query:"limit"`
-	Offset uint64 `query:"offset"`
+	Limit  uint64 `query:"limit" validate:"required"`
+	Offset uint64 `query:"offset" validate:"required"`
 }
 
 type listCommandsOutput struct {
@@ -105,8 +109,9 @@ func (r *commandRoutes) ListCommands(c echo.Context) error {
 		queryParams.Limit = DEFAULT_LIMIT
 		queryParams.Offset = 0
 	}
-	if queryParams.Limit == 0 {
+	if err := c.Validate(queryParams); err != nil {
 		queryParams.Limit = DEFAULT_LIMIT
+		queryParams.Offset = 0
 	}
 
 	commands, err := r.commandService.ListCommands(c.Request().Context(), queryParams.Limit, queryParams.Offset)

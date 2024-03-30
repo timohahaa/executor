@@ -14,6 +14,7 @@ import (
 	"github.com/timohahaa/executor/internal/service"
 	"github.com/timohahaa/executor/pkg/httpserver"
 	"github.com/timohahaa/executor/pkg/logger"
+	"github.com/timohahaa/executor/pkg/validator"
 	"github.com/timohahaa/postgres"
 )
 
@@ -51,6 +52,7 @@ func Run(configFilePath string) {
 	// handlers and routes
 	mainLogger.Info("initializing handlers and routes...")
 	handler := v1.NewRouter(commandService, httpLogger)
+	handler.Validator = validator.New()
 
 	mainLogger.Infof("starting http server...")
 	server := httpserver.New(handler, httpserver.Port(cfg.Server.Port))
