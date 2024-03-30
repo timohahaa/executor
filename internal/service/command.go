@@ -39,6 +39,15 @@ func (s *commandService) CreateCommand(ctx context.Context, commandText string) 
 
 	return command, nil
 }
+func (s *commandService) DeleteCommandById(ctx context.Context, commandId uint64) error {
+	err := s.commandRepo.DeleteCommandById(ctx, commandId)
+	if err != nil {
+		s.log.Errorf("commandService.DeleteCommandById -> commandRepo.DeleteCommandById: %v", err)
+		return err
+	}
+
+	return nil
+}
 
 func (s *commandService) ListCommands(ctx context.Context, limit, offset uint64) ([]entity.Command, error) {
 	commands, err := s.commandRepo.ListCommands(ctx, limit, offset)

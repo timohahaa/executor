@@ -24,6 +24,7 @@ func newCommandRoutes(g *echo.Group, cs service.CommandService) {
 
 	g.POST("/command", r.CreateCommand)
 	g.GET("/command/:commandId", r.GetCommandById)
+	g.DELETE("/command/:commandId", r.DeleteCommandById)
 	g.POST("/command/:commandId/run", r.RunCommand)
 	g.POST("/command/:commandId/stop", r.StopCommand)
 	g.GET("/commands", r.ListCommands)
@@ -87,6 +88,24 @@ func (r *commandRoutes) GetCommandById(c echo.Context) error {
 	output := getCommandOutput{Id: command.Id, Text: command.Text, LastOutput: command.LastOutput}
 
 	return c.JSON(http.StatusOK, output)
+}
+
+// DELETE /api/v1/command/{commandId}
+func (r *commandRoutes) DeleteCommandById(c echo.Context) error {
+	cId := c.Param("commandId")
+	commandId, err := strconv.ParseUint(cId, 10, 64)
+	if err != nil {
+		newErrorMessage(c, http.StatusBadRequest, ErrInvalidPathParameter.Error())
+		return err
+	}
+
+	err = r.commandService.DeleteCommandById(c.Request().Context(), commandId)
+	if err != nil {
+		newErrorMessage(c, http.StatusInternalServerError, ErrInternalServer.Error())
+		return err
+	}
+
+	return c.NoContent(http.StatusOK)
 }
 
 type listCommandsQueryParams struct {

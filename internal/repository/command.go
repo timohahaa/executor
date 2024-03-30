@@ -49,6 +49,20 @@ func (r *commandRepository) CreateCommand(ctx context.Context, commandText strin
 
 	return entity.Command{Id: createdId, Text: commandText}, nil
 }
+func (r *commandRepository) DeleteCommandById(ctx context.Context, commandId uint64) error {
+	sql, args, _ := r.db.Builder.
+		Delete("commands").
+		Where("command_id = ?", commandId).
+		ToSql()
+
+	_, err := r.db.ConnPool.Exec(ctx, sql, args...)
+	if err != nil {
+		r.log.Errorf("commandRepository.DeleteCommandById -> Exec: %v", err)
+		return err
+	}
+
+	return nil
+}
 
 func (r *commandRepository) ListCommands(ctx context.Context, limit, offset uint64) ([]entity.Command, error) {
 	sql, args, _ := r.db.Builder.
