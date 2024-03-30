@@ -12,10 +12,10 @@ func main() {
 	cmd := exec.Command("ls", "-la")
 	cmd2 := exec.Command("ls", "-la")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+		Setpgid: false,
 	}
 	cmd2.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+		Setpgid: false,
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

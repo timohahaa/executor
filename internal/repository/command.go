@@ -48,7 +48,7 @@ func (r *commandRepository) CreateCommand(ctx context.Context, commandText strin
 
 func (r *commandRepository) ListCommands(ctx context.Context, limit, offset uint64) ([]entity.Command, error) {
 	sql, args, _ := r.db.Builder.
-		Select("command_id", "command_text").
+		Select("command_id", "command_text", "last_output").
 		From("commands").
 		Limit(limit).
 		Offset(offset).
@@ -71,7 +71,7 @@ func (r *commandRepository) ListCommands(ctx context.Context, limit, offset uint
 
 func (r *commandRepository) GetCommandById(ctx context.Context, commandId uint64) (entity.Command, error) {
 	sql, args, _ := r.db.Builder.
-		Select("command_id", "command_text").
+		Select("command_id", "command_text", "last_output").
 		From("commands").
 		Where("command_id = ?", commandId).
 		ToSql()
@@ -87,6 +87,21 @@ func (r *commandRepository) GetCommandById(ctx context.Context, commandId uint64
 	return command, nil
 }
 
+func (r *commandRepository) SaveCommandOutput(ctx context.Context, commandId uint64, line string) error {
+	sql, args, _ := r.db.Builder.
+		Update("commands").
+		Set("last_output", "last_output || "+line).
+		Where("command_id = ?", commandId).
+		ToSql()
+
+	_, err := r.db.ConnPool.Exec(ctx, sql, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *commandRepository) SetCommandPID(ctx context.Context, commandId uint64, pid int) error {
 	key := fmt.Sprintf("command:%d", commandId)
 	err := r.rdb.Set(ctx, key, pid, time.Second*time.Duration(r.pidTTL)).Err()
@@ -100,8 +115,10 @@ func (r *commandRepository) SetCommandPID(ctx context.Context, commandId uint64,
 func (r *commandRepository) GetCommandPID(ctx context.Context, commandId uint64) (int, error) {
 	key := fmt.Sprintf("command:%d", commandId)
 	val, err := r.rdb.Get(ctx, key).Result()
-	if err != nil {
+	if errors.Is(err, redis.Nil) {
 		return 0, ErrCommandNotRunning
+	} else if err != nil {
+		return 0, err
 	}
 
 	// поскольку всегда сохраняем int, не возникнет ошибки парсинга

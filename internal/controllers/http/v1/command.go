@@ -56,8 +56,9 @@ func (r *commandRoutes) CreateCommand(c echo.Context) error {
 }
 
 type getCommandOutput struct {
-	Id   uint64 `json:"command_id"`
-	Text string `json:"command_text"`
+	Id         uint64 `json:"command_id"`
+	Text       string `json:"command_text"`
+	LastOutput string `json:"last_output"`
 }
 
 // GET /api/v1/command/{commandId}
@@ -78,7 +79,7 @@ func (r *commandRoutes) GetCommandById(c echo.Context) error {
 		return err
 	}
 
-	output := getCommandOutput{Id: command.Id, Text: command.Text}
+	output := getCommandOutput{Id: command.Id, Text: command.Text, LastOutput: command.LastOutput}
 
 	return c.JSON(http.StatusOK, output)
 }
@@ -114,7 +115,7 @@ func (r *commandRoutes) ListCommands(c echo.Context) error {
 	output.Next.Limit = queryParams.Limit
 	output.Next.Offset = queryParams.Offset + queryParams.Limit + 1
 	for _, command := range commands {
-		output.Data = append(output.Data, getCommandOutput{command.Id, command.Text})
+		output.Data = append(output.Data, getCommandOutput{Id: command.Id, Text: command.Text, LastOutput: command.LastOutput})
 	}
 
 	return c.JSON(http.StatusOK, output)
