@@ -24,6 +24,8 @@ func newCommandRoutes(g *echo.Group, cs service.CommandService) {
 
 	g.POST("/command", r.CreateCommand)
 	g.GET("/command/:commandId", r.GetCommandById)
+	g.POST("/command/:commandId/run", r.RunCommand)
+	g.GET("/commands", r.ListCommands)
 }
 
 type createCommandInput struct {
@@ -116,4 +118,9 @@ func (r *commandRoutes) ListCommands(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, output)
+}
+
+// POST /api/v1/command/{commandId}/run
+func (r *commandRoutes) RunCommand(c echo.Context) error {
+	return nil
 }

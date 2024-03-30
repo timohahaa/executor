@@ -1,25 +1,46 @@
 package main
 
 import (
-	"context"
-	"executor/internal/repository"
 	"fmt"
 	"log"
-
-	"github.com/timohahaa/postgres"
+	"os"
+	"os/exec"
+	"syscall"
 )
 
 func main() {
-	pg, err := postgres.New("postgres://timohahaa:timohahaa1337@localhost:5432/test")
+	cmd := exec.Command("ls", "-la")
+	cmd2 := exec.Command("ls", "-la")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+	cmd2.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd2.Stdout = os.Stdout
+	cmd2.Stderr = os.Stderr
+
+	err := cmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
+	}
+	err = cmd2.Start()
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	repo := repository.NewCommandRepository(pg)
-	entity, err := repo.CreateCommand(context.Background(), "chmod +x")
+	fmt.Printf("go process pid: %d\n", os.Getpid())
+	fmt.Printf("command pid: %d\n", cmd.Process.Pid)
+	fmt.Printf("command 2 pid: %d\n", cmd2.Process.Pid)
 
+	err = cmd.Wait()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
-	fmt.Printf("%+v\n", entity)
+	err = cmd2.Wait()
+	if err != nil {
+		log.Fatalln(err)
+	}
 }

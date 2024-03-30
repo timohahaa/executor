@@ -10,9 +10,11 @@ import (
 
 type commandService struct {
 	commandRepo repository.CommandRepository
+	// пусть до стандартной оболочки, например /bin/sh или /bin/bash
+	defaultShellPath string
 }
 
-func NewCommandService(commandRepo repository.CommandRepository) *commandService {
+func NewCommandService(commandRepo repository.CommandRepository, defaultShellPath string) *commandService {
 	return &commandService{
 		commandRepo: commandRepo,
 	}
@@ -38,6 +40,7 @@ func (s *commandService) ListCommands(ctx context.Context, limit, offset uint64)
 
 func (s *commandService) GetCommandById(ctx context.Context, commandId uint64) (entity.Command, error) {
 	command, err := s.commandRepo.GetCommandById(ctx, commandId)
+    // либо команда не найдена, либо ошибка на уровне подключения к БД
 	if errors.Is(err, repository.ErrCommandNotFound) {
 		return entity.Command{}, ErrCommandNotFound
 	} else if err != nil {
@@ -45,4 +48,17 @@ func (s *commandService) GetCommandById(ctx context.Context, commandId uint64) (
 	}
 
 	return command, nil
+}
+
+func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error {
+	command, err := s.commandRepo.GetCommandById(ctx, commandId)
+    // либо команда не найдена, либо ошибка на уровне подключения к БД
+	if errors.Is(err, repository.ErrCommandNotFound) {
+		return ErrCommandNotFound
+	} else if err != nil {
+		return err
+	}
+
+
+	return nil
 }

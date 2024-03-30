@@ -3,20 +3,29 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/timohahaa/executor/internal/entity"
 
 	"github.com/timohahaa/postgres"
 )
 
 type commandRepository struct {
-	db *postgres.Postgres
+	db  *postgres.Postgres
+	rdb *redis.Client
+	// как долно хранить pid исполняемой команды (в секундах)
+	pidTTL int64
 }
 
-func NewCommandRepository(pg *postgres.Postgres) *commandRepository {
+func NewCommandRepository(pg *postgres.Postgres, redis *redis.Client, pidTTL int64) *commandRepository {
 	return &commandRepository{
-		db: pg,
+		db:     pg,
+		rdb:    redis,
+		pidTTL: pidTTL,
 	}
 }
 
@@ -76,4 +85,37 @@ func (r *commandRepository) GetCommandById(ctx context.Context, commandId uint64
 	}
 
 	return command, nil
+}
+
+func (r *commandRepository) SetCommandPID(ctx context.Context, commandId uint64, pid int) error {
+	key := fmt.Sprintf("command:%d", commandId)
+	err := r.rdb.Set(ctx, key, pid, time.Second*time.Duration(r.pidTTL)).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *commandRepository) GetCommandPID(ctx context.Context, commandId uint64) (int, error) {
+	key := fmt.Sprintf("command:%d", commandId)
+	val, err := r.rdb.Get(ctx, key).Result()
+	if err != nil {
+		return 0, ErrCommandNotRunning
+	}
+
+	// поскольку всегда сохраняем int, не возникнет ошибки парсинга
+	pid, _ := strconv.Atoi(val)
+
+	return pid, nil
+}
+
+func (r *commandRepository) DeleteCommandPID(ctx context.Context, commandId uint64) error {
+	key := fmt.Sprintf("command:%d", commandId)
+	_, err := r.rdb.Del(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
