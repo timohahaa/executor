@@ -67,7 +67,7 @@ func (r *commandRepository) ListCommands(ctx context.Context, limit, offset uint
 
 	for rows.Next() {
 		var command entity.Command
-		err = rows.Scan(&command)
+		err = rows.Scan(&command.Id, &command.Text, &command.LastOutput)
 		commands = append(commands, command)
 	}
 
@@ -82,7 +82,7 @@ func (r *commandRepository) GetCommandById(ctx context.Context, commandId uint64
 		ToSql()
 
 	var command entity.Command
-	err := r.db.ConnPool.QueryRow(ctx, sql, args...).Scan(&command)
+	err := r.db.ConnPool.QueryRow(ctx, sql, args...).Scan(&command.Id, &command.Text, &command.LastOutput)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return entity.Command{}, ErrCommandNotFound
 	} else if err != nil {
@@ -94,11 +94,9 @@ func (r *commandRepository) GetCommandById(ctx context.Context, commandId uint64
 }
 
 func (r *commandRepository) SaveCommandOutput(ctx context.Context, commandId uint64, line string) error {
-	sql, args, _ := r.db.Builder.
-		Update("commands").
-		Set("last_output", "last_output || "+line).
-		Where("command_id = ?", commandId).
-		ToSql()
+	// нет поддержки set с сложными присвоениями у squirrel
+	sql := "UPDATE commands SET last_output = last_output || $1 WHERE command_id = $2"
+	args := []interface{}{line, commandId}
 
 	_, err := r.db.ConnPool.Exec(ctx, sql, args...)
 	if err != nil {

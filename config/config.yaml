@@ -1,0 +1,13 @@
+server:
+  port: "8080"
+  logPath: ./logs/
+
+postgres:
+  maxConnPoolSize: 5
+
+redis:
+  # время жизни в секундах
+  pidTTL: 1800
+
+general:
+  defaultShellPath: /bin/sh

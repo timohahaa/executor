@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -63,7 +64,8 @@ func (s *commandService) GetCommandById(ctx context.Context, commandId uint64) (
 }
 
 func (s *commandService) processOutput(ctx context.Context, commandId uint64, line string) error {
-	err := s.commandRepo.SaveCommandOutput(ctx, commandId, line)
+	// добавляем перенос строки в конце потому что bufio.Scanner читает по строкам
+	err := s.commandRepo.SaveCommandOutput(ctx, commandId, line+"\n")
 	if err != nil {
 		s.log.Errorf("commandService.processOutput -> commandRepo.SaveCommandOutput: %v", err)
 		return err
@@ -118,6 +120,7 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 	// стартуем исполнение команды
 	err = cmd.Start()
 	if err != nil {
+		fmt.Println(cmd.Path, cmd.Args)
 		s.log.Errorf("commandService.RunCommand -> cmd.Start: %v", err)
 		return err
 	}
@@ -174,6 +177,7 @@ func (s *commandService) StopCommand(ctx context.Context, commandId uint64) erro
 	err = process.Signal(syscall.Signal(0))
 	if err != nil {
 		// процесс уже был завершен
+		s.log.Errorf("commandService.StopCommand -> process.Signal: %v", err)
 		return nil
 	}
 

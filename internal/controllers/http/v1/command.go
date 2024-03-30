@@ -105,6 +105,9 @@ func (r *commandRoutes) ListCommands(c echo.Context) error {
 		queryParams.Limit = DEFAULT_LIMIT
 		queryParams.Offset = 0
 	}
+	if queryParams.Limit == 0 {
+		queryParams.Limit = DEFAULT_LIMIT
+	}
 
 	commands, err := r.commandService.ListCommands(c.Request().Context(), queryParams.Limit, queryParams.Offset)
 	if err != nil {
@@ -114,7 +117,7 @@ func (r *commandRoutes) ListCommands(c echo.Context) error {
 
 	output := listCommandsOutput{}
 	output.Next.Limit = queryParams.Limit
-	output.Next.Offset = queryParams.Offset + queryParams.Limit + 1
+	output.Next.Offset = queryParams.Offset + queryParams.Limit
 	for _, command := range commands {
 		output.Data = append(output.Data, getCommandOutput{Id: command.Id, Text: command.Text, LastOutput: command.LastOutput})
 	}
@@ -157,7 +160,7 @@ func (r *commandRoutes) StopCommand(c echo.Context) error {
 		return err
 	}
 
-	err = r.commandService.RunCommand(c.Request().Context(), commandId)
+	err = r.commandService.StopCommand(c.Request().Context(), commandId)
 	if errors.Is(err, service.ErrCommandNotRunning) {
 		newErrorMessage(c, http.StatusConflict, ErrCommandNotRunning.Error())
 		return ErrCommandNotRunning
