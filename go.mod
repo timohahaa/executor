@@ -17,6 +17,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/redis/go-redis/v9 v9.5.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/timohahaa/postgres v0.0.0-20240303090827-127654e90837 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect

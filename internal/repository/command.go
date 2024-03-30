@@ -101,6 +101,20 @@ func (r *commandRepository) SaveCommandOutput(ctx context.Context, commandId uin
 
 	return nil
 }
+func (r *commandRepository) ClearCommandOutput(ctx context.Context, commandId uint64) error {
+	sql, args, _ := r.db.Builder.
+		Update("commands").
+		Set("last_output", "").
+		Where("command_id = ?", commandId).
+		ToSql()
+
+	_, err := r.db.ConnPool.Exec(ctx, sql, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func (r *commandRepository) SetCommandPID(ctx context.Context, commandId uint64, pid int) error {
 	key := fmt.Sprintf("command:%d", commandId)

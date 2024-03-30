@@ -72,7 +72,7 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 		return ErrCommandAlreadyRunning
 	}
 	// не можем проверить, запущена ли команда, так как возникла ошибка
-	if err != nil && !errors.Is(err, repository.ErrCommandNotRunning) {
+	if !errors.Is(err, repository.ErrCommandNotRunning) {
 		return err
 	}
 
@@ -81,6 +81,12 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 	if errors.Is(err, repository.ErrCommandNotFound) {
 		return ErrCommandNotFound
 	} else if err != nil {
+		return err
+	}
+
+	// отчищаем старый вывод команды
+	err = s.commandRepo.ClearCommandOutput(ctx, commandId)
+	if err != nil {
 		return err
 	}
 
@@ -107,7 +113,7 @@ func (s *commandService) RunCommand(ctx context.Context, commandId uint64) error
 	s.commandRepo.SetCommandPID(ctx, commandId, cmd.Process.Pid)
 	// при завершении команды или возникновении ошибки "забываем" её pid
 	defer func() {
-		s.commandRepo.DeleteCommandPID(ctx, commandId)
+		_ = s.commandRepo.DeleteCommandPID(ctx, commandId)
 	}()
 
 	// сканируем и сохраняем вывод команды
@@ -144,7 +150,7 @@ func (s *commandService) StopCommand(ctx context.Context, commandId uint64) erro
 
 	// после завершения должны удалить pid команды
 	defer func() {
-		s.commandRepo.DeleteCommandPID(ctx, commandId)
+		_ = s.commandRepo.DeleteCommandPID(ctx, commandId)
 	}()
 
 	// нет ошибки на unix системах

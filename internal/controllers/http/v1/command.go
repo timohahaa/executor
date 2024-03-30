@@ -25,6 +25,7 @@ func newCommandRoutes(g *echo.Group, cs service.CommandService) {
 	g.POST("/command", r.CreateCommand)
 	g.GET("/command/:commandId", r.GetCommandById)
 	g.POST("/command/:commandId/run", r.RunCommand)
+	g.POST("/command/:commandId/stop", r.StopCommand)
 	g.GET("/commands", r.ListCommands)
 }
 
@@ -123,5 +124,52 @@ func (r *commandRoutes) ListCommands(c echo.Context) error {
 
 // POST /api/v1/command/{commandId}/run
 func (r *commandRoutes) RunCommand(c echo.Context) error {
-	return nil
+	cId := c.Param("commandId")
+	commandId, err := strconv.ParseUint(cId, 10, 64)
+	if err != nil {
+		newErrorMessage(c, http.StatusBadRequest, ErrInvalidPathParameter.Error())
+		return err
+	}
+
+	err = r.commandService.RunCommand(c.Request().Context(), commandId)
+	if errors.Is(err, service.ErrCommandAlreadyRunning) {
+		newErrorMessage(c, http.StatusConflict, ErrCommandAlreadyRunning.Error())
+		return ErrCommandAlreadyRunning
+	}
+	if errors.Is(err, service.ErrCommandNotFound) {
+		newErrorMessage(c, http.StatusConflict, ErrCommandNotFound.Error())
+		return ErrCommandNotFound
+	}
+	if err != nil {
+		newErrorMessage(c, http.StatusInternalServerError, ErrInternalServer.Error())
+		return err
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+// POST /api/v1/command/{commandId}/stop
+func (r *commandRoutes) StopCommand(c echo.Context) error {
+	cId := c.Param("commandId")
+	commandId, err := strconv.ParseUint(cId, 10, 64)
+	if err != nil {
+		newErrorMessage(c, http.StatusBadRequest, ErrInvalidPathParameter.Error())
+		return err
+	}
+
+	err = r.commandService.RunCommand(c.Request().Context(), commandId)
+	if errors.Is(err, service.ErrCommandNotRunning) {
+		newErrorMessage(c, http.StatusConflict, ErrCommandNotRunning.Error())
+		return ErrCommandNotRunning
+	}
+	if errors.Is(err, service.ErrCommandNotFound) {
+		newErrorMessage(c, http.StatusConflict, ErrCommandNotFound.Error())
+		return ErrCommandNotFound
+	}
+	if err != nil {
+		newErrorMessage(c, http.StatusInternalServerError, ErrInternalServer.Error())
+		return err
+	}
+
+	return c.NoContent(http.StatusOK)
 }
