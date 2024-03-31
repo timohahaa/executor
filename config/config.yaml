@@ -1,8 +1,10 @@
 server:
-  port: "8080"
+  # port: "8080"
+  # путь до папки с логами
   logPath: ./logs/
 
 postgres:
+  # количество подключений к базе
   maxConnPoolSize: 5
 
 redis:
@@ -10,4 +12,5 @@ redis:
   pidTTL: 1800
 
 general:
+  # путь до стандарной оболочки
   defaultShellPath: /bin/sh
