@@ -1,0 +1,276 @@
+{
+	"info": {
+		"_postman_id": "445da1ad-5ca7-4e30-a5a2-658ad10e6b9b",
+		"name": "Executor service tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "31758816"
+	},
+	"item": [
+		{
+			"name": "Health check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Command create",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"command_text\": \"ls -la\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command"
+					]
+				},
+				"description": "Создание команды"
+			},
+			"response": []
+		},
+		{
+			"name": "Command create body validation",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command"
+					]
+				},
+				"description": "Валидация тела запроса при создании команды"
+			},
+			"response": []
+		},
+		{
+			"name": "Command get no output",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command/7",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command",
+						"7"
+					]
+				},
+				"description": "Получение команды ДО запуска. В конце нужно указать id СОЗДАННОЙ команды (или не созданной, чтобы проверить на валидацию и возврат ошибок)"
+			},
+			"response": []
+		},
+		{
+			"name": "Command run",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command/7/run",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command",
+						"7",
+						"run"
+					]
+				},
+				"description": "Запуск команды. В конце нужно указать id СОЗДАННОЙ команды (или не созданной, чтобы проверить на валидацию и возврат ошибок)"
+			},
+			"response": []
+		},
+		{
+			"name": "Command get after run",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command/7",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command",
+						"7"
+					]
+				},
+				"description": "Получение команды полсе запуска (есть вывод). В конце нужно указать id СОЗДАННОЙ команды (или не созданной, чтобы проверить на валидацию и возврат ошибок)"
+			},
+			"response": []
+		},
+		{
+			"name": "List commands",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/commands",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"commands"
+					]
+				},
+				"description": "Получение списка команд. Нужно создать перед этим несколько команд. При желании можно указать limit и offset"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete command",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command/7",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command",
+						"7"
+					]
+				},
+				"description": "Удаление команды."
+			},
+			"response": []
+		},
+		{
+			"name": "Create long command",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"command_text\": \"sleep 100 && ls -la\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command"
+					]
+				},
+				"description": "Создает команду, которая будет выполнятся долго. (Чтобы проверить возможность остановки команды). Потенциально лучше выполнить этот запрос и запрос с остановкой CURL-ом в терминале в двух разных окнах, тк постман иногда выдает таймаут."
+			},
+			"response": []
+		},
+		{
+			"name": "Run long command",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command/8/run",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command",
+						"8",
+						"run"
+					]
+				},
+				"description": "См запрос \"Create long command\". Нужно указать id созданной долгой команды."
+			},
+			"response": []
+		},
+		{
+			"name": "Stop command",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/command/8/stop",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"command",
+						"8",
+						"stop"
+					]
+				},
+				"description": "Приостанавливает выполнение команды, если она еще выполняется"
+			},
+			"response": []
+		}
+	]
+}
